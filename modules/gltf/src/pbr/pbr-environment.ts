@@ -83,6 +83,7 @@ function makeCube(device: Device, {id, getTextureForFace, sampler}: {
     dimension: 'cube',
     mipmaps: false,
     sampler,
+    // @ts-expect-error
     data
   });
 }

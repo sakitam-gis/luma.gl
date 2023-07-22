@@ -8,6 +8,7 @@ import type {
   DeviceFeature,
   CanvasContextProps,
   TextureFormat,
+  Texture,
   VertexArray,
   VertexArrayProps,
   TypedArray
@@ -301,7 +302,8 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
     return new BufferWithAccessor(this, newProps);
   }
 
-  _createTexture(props: TextureProps): WEBGLTexture {
+  // _createTexture(props: TextureProps): WEBGLTexture {
+  _createTexture(props: TextureProps): Texture {
     return new WEBGLTexture(this, props);
   }
 

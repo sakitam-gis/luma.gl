@@ -52,7 +52,7 @@ export function readPixelsToArray(
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
-  const {gl, handle} = framebuffer as WEBGLFramebuffer;
+  const {gl, handle} = framebuffer as unknown as WEBGLFramebuffer;
   sourceWidth = sourceWidth || framebuffer.width;
   sourceHeight = sourceHeight || framebuffer.height;
 
@@ -67,7 +67,7 @@ export function readPixelsToArray(
   // Deduce the type from color attachment if not provided.
   sourceType =
     sourceType ||
-    (framebuffer.colorAttachments[attachment] as WEBGLTexture)?.type ||
+    (framebuffer.colorAttachments[attachment] as unknown as WEBGLTexture)?.type ||
     GL.UNSIGNED_BYTE;
 
   // Deduce type and allocated pixelArray if needed
@@ -116,7 +116,7 @@ export function readPixelsToBuffer(
   sourceHeight = sourceHeight || framebuffer.height;
 
   // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-  const webglFramebuffer = framebuffer as WEBGLFramebuffer;
+  const webglFramebuffer = framebuffer as unknown as WEBGLFramebuffer;
   const gl2 = webglFramebuffer.device.assertWebGL2();
 
   // deduce type if not available.
@@ -189,7 +189,7 @@ export function copyToTexture(
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   assert(framebuffer);
-  const webglFramebuffer = framebuffer as WEBGLFramebuffer;
+  const webglFramebuffer = framebuffer as unknown as WEBGLFramebuffer;
   const {device, handle} = webglFramebuffer;
   const isSubCopy =
     typeof targetX !== 'undefined' ||

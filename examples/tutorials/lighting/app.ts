@@ -1,4 +1,4 @@
-import {glsl, NumberArray, UniformStore, ShaderUniformType} from '@luma.gl/core';
+import {glsl, NumberArray, UniformStore, ShaderUniformType, loadImage} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {phongMaterial, lighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -61,11 +61,11 @@ const fs = glsl`\
     mat4 modelMatrix;
     mat4 mvpMatrix;
     vec3 eyePosition;
-  } uApp;
+  } app;
 
   void main(void) {
     vec3 materialColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
-    vec3 surfaceColor = lighting_getLightColor(materialColor, uApp.eyePosition, vPosition, normalize(vNormal));
+    vec3 surfaceColor = lighting_getLightColor(materialColor, app.eyePosition, vPosition, normalize(vNormal));
 
     gl_FragColor = vec4(surfaceColor, 1.0);
   }
@@ -121,7 +121,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    const texture = device.createTexture({data: 'vis-logo.png'});
+    const texture = device.createTexture({data: loadImage('vis-logo.png')});
 
     this.model = new Model(device, {
       vs,

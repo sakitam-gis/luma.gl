@@ -29,7 +29,7 @@ export type {ResourceProps} from './adapter/resources/resource';
 export {Resource} from './adapter/resources/resource';
 export type {BufferProps} from './adapter/resources/buffer';
 export {Buffer} from './adapter/resources/buffer';
-export type {TextureProps, TextureData} from './adapter/resources/texture';
+export type {TextureProps} from './adapter/resources/texture';
 export {Texture} from './adapter/resources/texture';
 export type {ExternalTextureProps} from './adapter/resources/external-texture';
 export {ExternalTexture} from './adapter/resources/external-texture';
@@ -56,6 +56,22 @@ export {CommandBuffer} from './adapter/resources/command-buffer';
 
 export type {VertexArrayProps} from './adapter/resources/vertex-array';
 export {VertexArray} from './adapter/resources/vertex-array';
+
+// TEXTURE TYPES 
+export type {
+  TextureCompressionFormat,
+  TextureCubeFace,
+  TextureLevelData,
+  ExternalImage,
+  TextureData,
+
+  Texture1DData,
+  Texture2DData,
+  Texture3DData,
+  TextureCubeData,
+  TextureArrayData,
+  TextureCubeArrayData
+} from './adapter/resources/texture';
 
 // API TYPES
 export type {AccessorObject} from './adapter/types/accessor';

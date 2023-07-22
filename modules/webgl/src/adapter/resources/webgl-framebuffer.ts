@@ -174,13 +174,13 @@ export class WEBGLFramebuffer extends Framebuffer {
     level: number
   ): void {
     const {gl, gl2} = this.device;
-    gl.bindTexture(texture.target, texture.handle);
+    gl.bindTexture(texture.glTarget, texture.handle);
 
-    switch (texture.target) {
+    switch (texture.glTarget) {
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
         this.device.assertWebGL2();
-        gl2?.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.target, level, layer);
+        gl2?.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.glTarget, level, layer);
         break;
 
       case GL.TEXTURE_CUBE_MAP:
@@ -197,7 +197,7 @@ export class WEBGLFramebuffer extends Framebuffer {
         assert(false, 'Illegal texture type');
     }
 
-    gl.bindTexture(texture.target, null);
+    gl.bindTexture(texture.glTarget, null);
   }
 }
 

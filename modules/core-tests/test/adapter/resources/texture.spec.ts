@@ -124,26 +124,24 @@ function testFormatDeduction(t, device: Device) {
   }
 }
 
-test.skip('WebGL#Texture format deduction', (t) => {
-  if (webgl2Device) {
-    testFormatDeduction(t, webgl2Device);
+test.skip('WebGL#Texture format deduction', async (t) => {
+  for (const device of await getTestDevices()) {
+    testFormatDeduction(t, device);
   }
-  testFormatDeduction(t, webgl1Device);
   t.end();
 });
 
-test.skip('WebGL#Texture format creation', (t) => {
-  if (webgl2Device) {
-    testFormatCreation(t, webgl2Device);
+test.skip('WebGL#Texture format creation', async (t) => {
+  for (const device of await getTestDevices()) {
+    testFormatCreation(t, device);
   }
-  testFormatCreation(t, webgl1Device);
   t.end();
 });
 
-test.skip('WebGL#Texture format creation with data', (t) => {
-  if (webgl2Device) {
-    testFormatCreation(t, webgl2Device, true);
-  }  testFormatCreation(t, webgl1Device, true);
+test.skip('WebGL#Texture format creation with data', async (t) => {
+  for (const device of await getTestDevices()) {
+    testFormatCreation(t, device, true);
+  }
   t.end();
 });
 

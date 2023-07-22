@@ -1,5 +1,5 @@
 // prettier-ignore
-// / <reference types="@webgpu/types" />
+/// <reference types="@webgpu/types" />
 
 import type {
   DeviceProps,
@@ -115,6 +115,12 @@ export class WebGPUDevice extends Device {
       vendorMasked: '',
       rendererMasked: ''
     };
+
+    // Error handling - TODO do we need to make sure the error is an Error instance?
+    device.addEventListener('uncapturederror', (event: Event) => {
+      const errorMessage = event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown error';
+      this.onError(new Error(errorMessage));
+    });
 
     // "Context" loss handling
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(async (resolve) => {

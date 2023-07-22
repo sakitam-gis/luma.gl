@@ -442,7 +442,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           }
 
           gl2.activeTexture(GL.TEXTURE0 + textureUnit);
-          gl2.bindTexture(texture.target, texture.handle);
+          gl2.bindTexture(texture.glTarget, texture.handle);
           // gl2.bindSampler(textureUnit, sampler.handle);
           textureUnit += 1;
           break;

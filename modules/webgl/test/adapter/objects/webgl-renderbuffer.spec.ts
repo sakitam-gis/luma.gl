@@ -7,6 +7,13 @@ import {getWebGLTestDevices} from '@luma.gl/test-utils';
 import {TextureFormat} from '@luma.gl/core';
 import {WEBGLRenderbuffer, _TEXTURE_FORMATS} from '@luma.gl/webgl';
 
+const RENDERBUFFER_FORMATS = {};
+for (const [key, value] of Object.entries(_TEXTURE_FORMATS)) {
+  if (_TEXTURE_FORMATS[key].renderbuffer) {
+    RENDERBUFFER_FORMATS[key] = value;
+  }
+}
+
 // const WEBGL1_FORMATS = [GL.RGB, GL.RGBA, GL.LUMINANCE_ALPHA, GL.LUMINANCE, GL.ALPHA];
 
 test('WebGL#WEBGLRenderbuffer construct/delete', (t) => {

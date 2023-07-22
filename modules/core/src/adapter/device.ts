@@ -11,13 +11,14 @@ import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipel
 import type {ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
 import type {Sampler, SamplerProps} from './resources/sampler';
 import type {Shader, ShaderProps} from './resources/shader';
-import type {Texture, TextureProps, TextureData} from './resources/texture';
+import type {Texture, TextureProps} from './resources/texture';
 import type {ExternalTexture, ExternalTextureProps} from './resources/external-texture';
 import type {Framebuffer, FramebufferProps} from './resources/framebuffer';
 import type {RenderPass, RenderPassProps} from './resources/render-pass';
 import type {ComputePass, ComputePassProps} from './resources/compute-pass';
 import type {CommandEncoder, CommandEncoderProps} from './resources/command-encoder';
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
+import {isTextureFormatCompressed} from './type-utils/decode-texture-format';
 
 /** Device properties */
 export type DeviceProps = {
@@ -199,6 +200,7 @@ export type DeviceFeature =
   | WebGLDeviceFeature
   | WebGLCompressedTextureFeatures;
 
+
 /**
  * WebGPU Device/WebGL context abstraction
  */
@@ -245,6 +247,11 @@ export abstract class Device {
   /** Check if device supports rendering to a specific texture format */
   abstract isTextureFormatRenderable(format: TextureFormat): boolean;
 
+  /** Check if a specific texture format is GPU compressed */
+  isTextureFormatCompressed(format: TextureFormat): boolean {
+    return isTextureFormatCompressed(format);
+  }
+
   // Device loss
 
   /** `true` if device is already lost */
@@ -253,15 +260,20 @@ export abstract class Device {
   /** Promise that resolves when device is lost */
   abstract readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
-  /** 
-   * Trigger device loss. 
-   * @returns `true` if context loss could actually be triggered. 
-   * @note primarily intended for testing how application reacts to device loss 
+  /**
+   * Trigger device loss.
+   * @returns `true` if context loss could actually be triggered.
+   * @note primarily intended for testing how application reacts to device loss
    */
   loseDevice(): boolean {
     return false;
   }
 
+  // Error Handling
+
+  /** Report unhandled device errors */
+  onError: (error: Error) => unknown = (error) => log.error(error.message);
+ 
   // Canvas context
 
   /** Default / primary canvas context. Can be null as WebGPU devices can be created without a CanvasContext */
@@ -289,14 +301,9 @@ export abstract class Device {
   /** Create a texture */
   abstract _createTexture(props: TextureProps): Texture;
   createTexture(props: TextureProps): Texture;
-  createTexture(data: Promise<TextureData>): Texture;
-  createTexture(url: string): Texture;
+  // createTexture(data: Promise<TextureData>): Texture;
 
-  createTexture(props: TextureProps | Promise<TextureData> | string): Texture {
-    // Signature: new Texture2D(gl, url | Promise)
-    if (props instanceof Promise || typeof props === 'string') {
-      props = {data: props};
-    }
+  createTexture(props: TextureProps): Texture {
     return this._createTexture(props);
   }
 
@@ -336,7 +343,6 @@ export abstract class Device {
   // Resource creation helpers
 
   protected _getBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
-
     if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
       props = {data: props};
     }
@@ -355,6 +361,6 @@ export abstract class Device {
         log.warn('indices buffer content must be of integer type')();
       }
     }
-    return newProps;    
+    return newProps;
   }
 }

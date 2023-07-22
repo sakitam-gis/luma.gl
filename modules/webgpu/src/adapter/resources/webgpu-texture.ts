@@ -1,5 +1,24 @@
 // luma.gl, MIT license
-import {Texture, TextureProps, Sampler, SamplerProps} from '@luma.gl/core';
+import type {
+  // Device,
+  TextureProps,
+  Sampler,
+  SamplerProps,
+  // TextureFormat,
+  // TextureCubeFace,
+  // ExternalImage,
+  // TextureLevelData,
+
+  Texture1DData,
+  Texture2DData,
+  Texture3DData,
+  TextureCubeData,
+  TextureArrayData,
+  TextureCubeArrayData
+} from '@luma.gl/core';
+import {Texture} from '@luma.gl/core';
+
+
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
@@ -108,6 +127,30 @@ export class WebGPUTexture extends Texture {
     return this;
   }
 
+  setTexture1DData(data: Texture1DData): void {
+    throw new Error('not implemented');
+  }
+
+  setTexture2DData(lodData: Texture2DData, depth?: number, target?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTexture3DData(lodData: Texture3DData, depth?: number, target?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureCubeData(data: TextureCubeData, depth?: number): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureArrayData(data: TextureArrayData): void {
+    throw new Error('not implemented');
+  }
+
+  setTextureCubeArrayData(data: TextureCubeArrayData): void {
+    throw new Error('not implemented');
+  }
+  
   setData(options: {
     data: any;
   }) {

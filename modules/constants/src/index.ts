@@ -3,6 +3,8 @@ export {GL} from './constants-enum';
 
 // WebGL types
 export type {
+  GLTextureTarget,
+  GLTextureCubeMapTarget,
   GLPrimitiveTopology,
   GLPrimitive,
   GLDataType,
