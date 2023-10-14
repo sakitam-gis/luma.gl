@@ -1,15 +1,15 @@
 import {Matrix4, Vector3} from '@math.gl/core';
-import {log} from '@luma.gl/webgl';
+// import {log} from '@luma.gl/webgl';
 import ScenegraphNode from './scenegraph-node';
 
 export default class GroupNode extends ScenegraphNode {
   constructor(props = {}) {
     props = Array.isArray(props) ? {children: props} : props;
     const {children = []} = props;
-    log.assert(
-      children.every(child => child instanceof ScenegraphNode),
-      'every child must an instance of ScenegraphNode'
-    );
+    // log.assert(
+    //   children.every(child => child instanceof ScenegraphNode),
+    //   'every child must an instance of ScenegraphNode'
+    // );
     super(props);
     this.children = children;
   }

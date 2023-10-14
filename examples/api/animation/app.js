@@ -152,7 +152,7 @@ export default class AppAnimationLoop extends AnimationLoop {
           modules: [dirlight],
           geometry: new CubeGeometry(),
           uniforms: {
-            uProjection: new Matrix4().perspective({fov: radians(60), aspect, near: 1, far: 20.0}),
+            uProjection: new Matrix4().perspective({fovy: radians(60), aspect, near: 1, far: 20.0}),
             uView: new Matrix4().lookAt({
               center: [0, 0, 0],
               eye: [0, 0, -8]

@@ -142,7 +142,7 @@ export default class AppAnimationLoop extends AnimationLoop {
 
     const eyePosition = [5, -3, 5];
     const view = new Matrix4().lookAt({eye: eyePosition});
-    const projection = new Matrix4().perspective({fov: radians(75), aspect});
+    const projection = new Matrix4().perspective({fovy: radians(75), aspect});
 
     gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
