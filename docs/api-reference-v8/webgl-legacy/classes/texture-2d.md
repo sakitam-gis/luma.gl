@@ -97,7 +97,6 @@ There is also a short form where the image data (or a promise resolving to the i
 
 ```
 import {Texture2D} from '@luma.gl/gltools';
-import {loadImage} from '@loaders.gl/core';
 
 const texture1 = new Texture2D(gl, loadImage(url));
 // equivalent to
