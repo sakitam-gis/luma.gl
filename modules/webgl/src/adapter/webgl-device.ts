@@ -56,7 +56,8 @@ import type {
   ComputePass,
   ComputePassProps,
   // CommandEncoder,
-  CommandEncoderProps
+  CommandEncoderProps,
+  TransformFeedbackProps
 } from '@luma.gl/core';
 
 import {BufferWithAccessor} from '../classic/buffer-with-accessor';
@@ -69,6 +70,7 @@ import {WEBGLRenderPass} from './resources/webgl-render-pass';
 import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
 import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
+import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 
 const LOG_LEVEL = 1;
 
@@ -338,7 +340,11 @@ ${this.info.vendor}, ${this.info.renderer} for canvas: ${this.canvasContext.id}`
   }
 
   beginComputePass(props: ComputePassProps): ComputePass {
-    throw new Error('compute shaders not supported in WebGL');
+    throw new Error('Compute shaders not supported in WebGL');
+  }
+
+  createTransformFeedback(props: TransformFeedbackProps): WEBGLTransformFeedback {
+    return new WEBGLTransformFeedback(this, props);
   }
 
   private renderPass: WEBGLRenderPass | null = null;
