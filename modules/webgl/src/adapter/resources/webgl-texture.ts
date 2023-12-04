@@ -66,41 +66,34 @@ export class WEBGLTexture extends Texture {
   readonly gl2: WebGL2RenderingContext | null;
   readonly handle: WebGLTexture;
 
-  /**
-   * Set to true as soon as texture has been initialized.
-   * RenderPipeline.draw() checks the loaded flag of all textures.
-   * Textures that are still loading from promises have not been initialized with valid data
-   */
-  loaded: boolean = false;
-
-  /** Sampler object (currently unused) */
-  sampler: WEBGLSampler = undefined;
+  // inherited props
+  // dimension: ...
+  // format: GLTextureTarget;
   // width: number = undefined;
   // height: number = undefined;
   // depth: number = undefined;
-  // format: GLTextureTarget;
+  /** Sampler object (currently unused) */
+  sampler: WEBGLSampler = undefined;
 
-  // data;
-
-  glFormat: GL = undefined;
-  glInternalFormat: GL = undefined;
-  type: GL = undefined;
-  dataFormat: GL = undefined;
-  mipmaps: boolean = undefined;
+  // WebGL props
 
   /**
    * @note `target` cannot be modified by bind:
    * textures are special because when you first bind them to a target,
-   * they get special information. When you first bind a texture as a
-   * GL_TEXTURE_2D, you are saying that this texture is a 2D texture.
+   * When you first bind a texture as a GL_TEXTURE_2D, you are saying that this texture is a 2D texture.
    * And it will always be a 2D texture; this state cannot be changed ever.
    * A texture that was first bound as a GL_TEXTURE_2D, must always be bound as a GL_TEXTURE_2D;
    * attempting to bind it as GL_TEXTURE_3D will give rise to a run-time error
    * */
   glTarget: GL;
 
+  /** The WebGL constant corresponding to the WebGPU style constant in this.format */
+  glFormat: GL;
+
+  mipmaps: boolean = undefined;
+
   // TODO - this is assigned during bind, can be removed here
-  textureUnit: number = undefined;
+  // textureUnit: number = undefined;
 
   _video: {
     video: HTMLVideoElement;
@@ -109,17 +102,19 @@ export class WEBGLTexture extends Texture {
   };
 
   constructor(device: Device, props: TextureProps) {
-    // Note we don't want to hold on to data
+    // Note: Clear out `props.data` so that we don't hold a reference to any big memory chunks
     super(device, {...Texture.defaultProps, ...props, data: undefined});
 
     this.device = cast<WebGLDevice>(device);
     this.gl = this.device.gl;
     this.gl2 = this.device.gl2;
     this.handle = this.props.handle || this.gl.createTexture();
-    this.device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data}); // {name: this.props.id};
+    this.device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data});
 
-    this.glFormat = GL.RGBA;
+    // Note: In WebGL the texture target defines the type of texture on first bind.
     this.glTarget = getWebGLTextureTarget(this.props.dimension);
+    // The target format of this texture
+    this.glFormat = convertTextureFormatToGL(this.props.format, this.device.isWebGL2);
 
     // Signature: new Texture2D(gl, {data: url})
     if (typeof this.props?.data === 'string') {
@@ -174,34 +169,18 @@ export class WEBGLTexture extends Texture {
 
     // const {parameters = {}  as Record<GL, any>} = props;
 
-    let {width, height, mipmaps = true} = props;
-    // const {depth = 0} = props;
+    let {width, height} = props;
 
-    ({width, height} = Texture.getTextureDataSize(data));
-
-    const glFormat = convertTextureFormatToGL(props.format, this.device.isWebGL2);
-    const glType = GL.UNSIGNED_BYTE;
+    if (!width || !height) {
+      const textureSize = Texture.getTextureDataSize(data);
+      width = textureSize?.width || 1;
+      height = textureSize?.height || 1;
+    }
 
     // Store opts for accessors
     this.width = width;
     this.height = height;
-    // this.depth = depth;x
-    this.glFormat = glFormat;
-    this.type = glType;
-
-    // this.textureUnit = textureUnit;
-
-    if (Number.isFinite(this.textureUnit)) {
-      this.gl.activeTexture(GL.TEXTURE0 + this.textureUnit);
-      this.gl.bindTexture(this.glTarget, this.handle);
-    }
-
-    if (mipmaps && this.device.isWebGL1 && isNPOT(this.width, this.height)) {
-      log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaps`)();
-      mipmaps = false;
-    }
-
-    this.mipmaps = mipmaps;
+    this.depth = props.depth;
 
     // prettier-ignore
     switch (this.props.dimension) {
@@ -216,53 +195,33 @@ export class WEBGLTexture extends Texture {
 
     // Set texture sampler parameters
     this.setSampler(props.sampler);
-    
-    // TODO backards compatibility (GL parameters)?
+
+    // TODO backards compatibility with GL parameters?
     // this._setSamplerParameters(parameters);
 
-    if (mipmaps) {
+    this.mipmaps = props.mipmaps;
+    if (props.mipmaps && this.device.isWebGL1 && isNPOT(this.width, this.height)) {
+      log.warn(`texture: ${this} is Non-Power-Of-Two, disabling mipmaps`)();
+      this.mipmaps = false;
+    }
+
+    if (this.mipmaps) {
       this.generateMipmap();
     }
 
-    // if (isVideo) {
-    //   this._video = {
-    //     video: data as HTMLVideoElement,
-    //     parameters,
-    //     // @ts-expect-error
-    //     lastTime: data.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA ? data.currentTime : -1
-    //   };
-    // }
+    if (isVideo) {
+      this._video = {
+        video: data as HTMLVideoElement,
+        // TODO  - should we be using the sampler parameters here?
+        parameters: {},
+        // @ts-expect-error HTMLVideoElement.HAVE_CURRENT_DATA is not declared
+        lastTime: data.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA ? data.currentTime : -1
+      };
+    }
 
     // This property is checked by draw(). The texture won't render until it is fully initialized
     this.loaded = true;
   }
-
-  /*
-  initializeCube(props?: TextureProps): void {
-    const {mipmaps = true} = props; // , parameters = {} as Record<GL, any>} = props;
-
-    // Store props for accessors
-    // this.props = props;
-
-    // @ts-expect-error
-    this.setCubeMapData(props).then(() => {
-      this.loaded = true;
-
-      // TODO - should genMipmap() be called on the cubemap or on the faces?
-      // TODO - without generateMipmap() cube textures do not work at all!!! Why?
-      if (mipmaps) {
-        this.generateMipmap(props);
-      }
-
-      this.setSampler(props.sampler);
-
-      // v8 compatibility?
-      // const {parameters = {} as Record<GL, any>} = props;
-      // this._setSamplerParameters(parameters);
-    });
-    return;
-  }
-  */
 
   setSampler(sampler: Sampler | SamplerProps = {}): void {
     let samplerProps: SamplerParameters;
@@ -277,7 +236,6 @@ export class WEBGLTexture extends Texture {
     // TODO - technically, this is only needed in WebGL1. In WebGL2 we could always use the sampler.
     const parameters = convertSamplerParametersToWebGL(samplerProps);
     this._setSamplerParameters(parameters);
-    return;
   }
 
   /**
@@ -332,7 +290,6 @@ export class WEBGLTexture extends Texture {
       this.gl.generateMipmap(this.glTarget);
     });
     this.gl.bindTexture(this.glTarget, null);
-    return;
   }
 
   // Image Data Setters
@@ -441,6 +398,32 @@ export class WEBGLTexture extends Texture {
     this.unbind();
   }
 
+    /*
+  initializeCube(props?: TextureProps): void {
+    const {mipmaps = true} = props; // , parameters = {} as Record<GL, any>} = props;
+
+    // Store props for accessors
+    // this.props = props;
+
+    // @ts-expect-error
+    this.setCubeMapData(props).then(() => {
+      this.loaded = true;
+
+      // TODO - should genMipmap() be called on the cubemap or on the faces?
+      // TODO - without generateMipmap() cube textures do not work at all!!! Why?
+      if (mipmaps) {
+        this.generateMipmap(props);
+      }
+
+      this.setSampler(props.sampler);
+
+      // v8 compatibility?
+      // const {parameters = {} as Record<GL, any>} = props;
+      // this._setSamplerParameters(parameters);
+    });
+  }
+  */
+
 
   // HELPERS
 
@@ -448,7 +431,7 @@ export class WEBGLTexture extends Texture {
     return this.gl.getParameter(GL.ACTIVE_TEXTURE) - GL.TEXTURE0;
   }
 
-  bind(textureUnit = this.textureUnit) {
+  bind(textureUnit?: number): number {
     const {gl} = this;
 
     if (textureUnit !== undefined) {
@@ -460,7 +443,7 @@ export class WEBGLTexture extends Texture {
     return textureUnit;
   }
 
-  unbind(textureUnit = this.textureUnit) {
+  unbind(textureUnit?: number): number {
     const {gl} = this;
 
     if (textureUnit !== undefined) {
@@ -472,10 +455,10 @@ export class WEBGLTexture extends Texture {
     return textureUnit;
   }
 
-    // INTERNAL METHODS
+  // INTERNAL METHODS
 
   /** @todo update this method to accept LODs */
-  setImageDataForFace(options) {
+  setImageDataForFace(options): void {
     const {
       face,
       width,
@@ -507,8 +490,6 @@ export class WEBGLTexture extends Texture {
     } else {
       gl.texImage2D(face, 0, format, format, type, imageData);
     }
-
-    return;
   }
 
   _getImageDataMap(faceData: Record<string | GL, any>): Record<GL, any> {
@@ -571,7 +552,6 @@ export class WEBGLTexture extends Texture {
     }
 
     this.gl.bindTexture(this.glTarget, null);
-    return;
   }
 
   // CLASSIC

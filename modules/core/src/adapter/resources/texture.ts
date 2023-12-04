@@ -172,9 +172,16 @@ export abstract class Texture extends Resource<TextureProps> {
   /** height in pixels of this texture */
   height: number;
   /** depth of this texture */
-  readonly depth: number;
+  depth: number;
   /** Default sampler for this texture */
   abstract sampler: Sampler;
+
+  /**
+   * Set to true as soon as texture has been initialized.
+   * RenderPipeline.draw() checks the loaded flag of all textures.
+   * Textures that are still loading from promises have not been initialized with valid data
+   */
+  loaded: boolean = false;
 
   /** Check if data is an external image */
   static isExternalImage(data: unknown): ExternalImage | null {
@@ -193,7 +200,9 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   /** Get the size of the texture described by the provided TextureData */
-  static getTextureDataSize(data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData): {width: number; height: number} {
+  static getTextureDataSize(
+    data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData
+  ): {width: number; height: number} {
     return getTextureDataSize(data);
   }
 
@@ -217,28 +226,28 @@ export abstract class Texture extends Resource<TextureProps> {
   abstract setTextureArrayData(data: TextureArrayData): void;
   abstract setTextureCubeArrayData(data: TextureCubeArrayData): void;
 
-/**
- * @param {*} pixels, data -
- *  null - create empty texture of specified format
- *  Typed array - init from image data in typed array
- *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
- *  HTMLImageElement|Image - Inits with content of image. Auto width/height
- *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
- *  HTMLVideoElement - Creates video texture. Auto width/height
- *
- * @param  x - xOffset from where texture to be updated
- * @param  y - yOffset from where texture to be updated
- * @param  width - width of the sub image to be updated
- * @param  height - height of the sub image to be updated
- * @param  level - mip level to be updated
- * @param {GLenum} format - internal format of image data.
- * @param {GLenum} type
- *  - format of array (autodetect from type) or
- *  - (WEBGL2) format of buffer or ArrayBufferView
- * @param {GLenum} dataFormat - format of image data.
- * @param {Number} offset - (WEBGL2) offset from start of buffer
- * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
- */
+  /**
+   * @param {*} pixels, data -
+   *  null - create empty texture of specified format
+   *  Typed array - init from image data in typed array
+   *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
+   *  HTMLImageElement|Image - Inits with content of image. Auto width/height
+   *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
+   *  HTMLVideoElement - Creates video texture. Auto width/height
+   *
+   * @param  x - xOffset from where texture to be updated
+   * @param  y - yOffset from where texture to be updated
+   * @param  width - width of the sub image to be updated
+   * @param  height - height of the sub image to be updated
+   * @param  level - mip level to be updated
+   * @param {GLenum} format - internal format of image data.
+   * @param {GLenum} type
+   *  - format of array (autodetect from type) or
+   *  - (WEBGL2) format of buffer or ArrayBufferView
+   * @param {GLenum} dataFormat - format of image data.
+   * @param {Number} offset - (WEBGL2) offset from start of buffer
+   * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
+   */
 }
 
 // HELPER METHODS
@@ -251,7 +260,7 @@ function isExternalImage(data: unknown): ExternalImage | null {
     (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) ||
     (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
     (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement);
-  return isExternalImage ? data as ExternalImage : null;
+  return isExternalImage ? (data as ExternalImage) : null;
 }
 
 /** Determine size (width and height) of provided image data */
@@ -275,22 +284,23 @@ function getExternalImageSize(data: ExternalImage): {width: number; height: numb
 }
 
 /** Get the size of the texture described by the provided TextureData */
-function getTextureDataSize(data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData): {width: number; height: number} {
+function getTextureDataSize(
+  data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData
+): {width: number; height: number} {
   if (!data) {
-    return {width: 1, height: 1};
+    return null;
   }
-  if (Texture.isExternalImage(data)) {
-    return Texture.getExternalImageSize(data as ExternalImage);
-  }
+  // Recurse into arrays (array of miplevels)
   if (Array.isArray(data)) {
     return Texture.getTextureDataSize(data[0]);
   }
-  if (data instanceof Promise) {
-    throw new Error('size');
+  const externalImage = Texture.isExternalImage(data);
+  if (externalImage) {
+    return Texture.getExternalImageSize(externalImage);
   }
-  if (data && typeof data === 'object') {
-    const untypedData = data as unknown as Record<string, number>; 
+  if (data && typeof data === 'object' && data.constructor === Object) {
+    const untypedData = data as unknown as Record<string, number>;
     return {width: untypedData.width, height: untypedData.height};
   }
-  throw new Error('size');
+  throw new Error('texture size deduction failed');
 }
