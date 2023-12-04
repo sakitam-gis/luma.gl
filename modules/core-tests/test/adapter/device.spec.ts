@@ -13,6 +13,7 @@ test('WebGLDevice#info', (t) => {
   t.end();
 });
 
+// Minimal test, extensive test in texture-formats.spec
 test('WebGLDevice#isTextureFormatCompressed', async (t) => {
   for (const device of await getTestDevices()) {
     // Just sanity check two types

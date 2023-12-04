@@ -1,9 +1,11 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-// Texture class.
-// @todo
-// - [ ] cube texture init params
+// @todo texture refactor
+// - [ ] cube texture init params P1
+// - [ ] 3d texture init params P1
+// - [ ] GPU memory tracking
+// - [ ] raw data inputs
 // - [ ] video (external) textures
 
 import type {
@@ -119,7 +121,7 @@ export class WEBGLTexture extends Texture {
     this.glFormat = GL.RGBA;
     this.glTarget = getWebGLTextureTarget(this.props.dimension);
 
-\    // Signature: new Texture2D(gl, {data: url})
+    // Signature: new Texture2D(gl, {data: url})
     if (typeof this.props?.data === 'string') {
       Object.assign(this.props, {data: loadImage(this.props.data)});
     }
@@ -201,29 +203,16 @@ export class WEBGLTexture extends Texture {
 
     this.mipmaps = mipmaps;
 
+    // prettier-ignore
     switch (this.props.dimension) {
-      case '1d':
-        this.setTexture1DData(data as Texture1DData);
-        break;
-      case '2d':
-        this.setTexture2DData(data as Texture2DData);
-        break;
-      case '3d':
-        this.setTexture3DData(props.data as TextureArrayData);
-        break;
-      case 'cube':
-        this.setTextureCubeData(props.data as TextureCubeData);
-        break;
-      case '2d-array':
-        this.setTextureArrayData(props.data as TextureArrayData);
-        break;
-      case 'cube-array':
-        this.setTextureCubeArrayData(props.data as TextureCubeArrayData);
-        break;
-      default:
-        throw new Error(props.dimension);
+      case '1d': this.setTexture1DData(data as Texture1DData); break;
+      case '2d': this.setTexture2DData(data as Texture2DData); break;
+      case '3d': this.setTexture3DData(props.data as TextureArrayData); break;
+      case 'cube': this.setTextureCubeData(props.data as TextureCubeData); break;
+      case '2d-array': this.setTextureArrayData(props.data as TextureArrayData); break;
+      case 'cube-array': this.setTextureCubeArrayData(props.data as TextureCubeArrayData); break;
+      default: throw new Error(props.dimension);
     }
-
 
     // Set texture sampler parameters
     this.setSampler(props.sampler);
@@ -530,7 +519,6 @@ export class WEBGLTexture extends Texture {
         delete faceData[faceName];
       }
     }
-    debugger;
     return faceData;
   }
 
@@ -668,14 +656,8 @@ export class WEBGLTexture extends Texture {
     switch (this.props.dimension) {
       case '2d-array':
       case '3d':
-        this.gl2.texStorage3D(
-          this.glTarget,
-          levels,
-          this.glFormat,
-          this.width,
-          this.height,
-          this.depth
-        );
+        // prettier-ignore
+        this.gl2.texStorage3D(this.glTarget, levels, this.glFormat, this.width, this.height, this.depth);
         break;
       default:
         this.gl2.texStorage2D(this.glTarget, levels, this.glFormat, this.width, this.height);
@@ -757,6 +739,8 @@ export class WEBGLTexture extends Texture {
     const {format: glSrcFormat, dataType: glSrcType} = getWebGLTextureFormatAndDataType(
       data.format
     );
+    const imageSize = data.data.byteLength;
+
     // In WebGL the buffer is not a parameter. Instead it needs to be bound to a special bind point
     const webglBuffer = buffer as WEBGLBuffer;
     this.device.gl2.bindBuffer(GL.PIXEL_UNPACK_BUFFER, webglBuffer.handle);
@@ -767,7 +751,7 @@ export class WEBGLTexture extends Texture {
         if (compressed) {
           // srcFormat and srcType are fully specified by the compressed texture format
           // prettier-ignore
-          this.device.gl2.compressedTexImage3D(this.glTarget, level, glFormat, data.width, data.height, depth, BORDER, 0); // image size , offset
+          this.device.gl2.compressedTexImage3D(this.glTarget, level, glFormat, data.width, data.height, depth, BORDER, imageSize, 0); // image size , offset
         } else {
           // prettier-ignore
           this.gl2.texImage3D(this.glTarget, level, glFormat, this.width, this.height, depth, BORDER, glSrcFormat, glSrcType, 0); // offset
@@ -959,151 +943,6 @@ export class WEBGLTexture extends Texture {
     }
   }
 }
-
-/*
-  * Allocates storage
-  * @param {*} pixels -
-  *  null - create empty texture of specified format
-  *  Typed array - init from image data in typed array
-  *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
-  *  HTMLImageElement|Image - Inits with content of image. Auto width/height
-  *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
-  *  HTMLVideoElement - Creates video texture. Auto width/height
-  *
-  * @param  width -
-  * @param  height -
-  * @param  mipMapLevel -
-  * @param {GLenum} format - format of image data.
-  * @param {GLenum} type
-  *  - format of array (autodetect from type) or
-  *  - (WEBGL2) format of buffer
-  * @param {Number} offset - (WEBGL2) offset from start of buffer
-  * @parameters - temporary settings to be applied, can be used to supply pixel store settings.
-  *
-// eslint-disable-next-line max-statements, complexity
-setImageData(options: SetImageDataOptions) {
-  if (this.props.dimension === '3d' || this.props.dimension === '2d-array') {
-    return this.setImageData3D(options);
-  }
-
-  this.trackDeallocatedMemory('Texture');
-
-  const {
-    target = this.glTarget,
-    pixels = null,
-    level = 0,
-    glFormat = this.glFormat,
-    offset = 0,
-    parameters = {}  as Record<GL, any>
-  } = options;
-
-  let {
-    data = null,
-    type = this.type,
-    width = this.width,
-    height = this.height,
-    dataFormat = this.dataFormat,
-    compressed = false
-  } = options;
-
-  // pixels variable is  for API compatibility purpose
-  if (!data) {
-    data = pixels;
-  }
-
-  ({type, dataFormat, compressed, width, height} = this._deduceParameters({
-    format: this.props.format,
-    type,
-    dataFormat,
-    compressed,
-    data,
-    width,
-    height
-  }));
-
-  const {gl} = this;
-  gl.bindTexture(this.glTarget, this.handle);
-
-  let dataType = null;
-  ({data, dataType} = this._getDataType({data, compressed}));
-
-  if (data && data.byteLength) {
-    this.trackAllocatedMemory(data.byteLength, 'Texture');
-  } else {
-    const bytesPerPixel = getTextureFormatBytesPerPixel(this.props.format, this.device.isWebGL2);
-    this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
-  }
-
-  this.loaded = true;
-
-  return;
-}
-*/
-
-/** Image 3D copies from Typed Array or WebGLBuffer *
-  setImageData3D(options: SetImageData3DOptions) {
-    const {
-      level = 0,
-      dataFormat,
-      format,
-      type, // = GL.UNSIGNED_BYTE,
-      width,
-      height,
-      depth = 1,
-      offset = 0,
-      data,
-      parameters = {}
-    } = options;
-
-    this.trackDeallocatedMemory('Texture');
-
-    this.gl.bindTexture(this.glTarget, this.handle);
-
-    const webglTextureFormat = getWebGLTextureParameters(format, this.device.isWebGL2);
-
-    withGLParameters(this.gl, parameters, () => {
-      if (ArrayBuffer.isView(data)) {
-        this.device.gl2.texImage3D(
-          this.glTarget,
-          level,
-          webglTextureFormat.format,
-          width,
-          height,
-          depth,
-          BORDER,
-          webglTextureFormat.dataFormat,
-          webglTextureFormat.type, // dataType: getWebGL,
-          data
-        );
-      }
-
-      if (data instanceof WEBGLBuffer) {
-        this._setMipLevelFromGPUBuffer(buffer, options);
-      } 
-    });
-
-    if (data && data.byteLength) {
-      this.trackAllocatedMemory(data.byteLength, 'Texture');
-    } else {
-      const bytesPerPixel = getTextureFormatBytesPerPixel(this.props.format, this.device.isWebGL2);
-      this.trackAllocatedMemory(this.width * this.height * this.depth * bytesPerPixel, 'Texture');
-    }
-
-    this.loaded = true;
-
-    return;
-  }
-
-setMipLevel(depth: number, mipLevel: number, data: ExternalImage): void {
-  if (data instanceof Buffer) {
-    return this._setMipLevelFromGPUBuffer();
-  }
-  if (typeof data === 'object') {
-    return this.setTextureLevelDataFromCPU();
-  }
-  this._setMipLevelFromExternalTexture();
-}
-*/
 
 // HELPERS
 
